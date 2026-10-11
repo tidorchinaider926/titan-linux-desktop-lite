@@ -1,0 +1,7 @@
+<!-- À ajouter dans android/app/src/main/AndroidManifest.xml -->
+<uses-permission android:name="com.termux.permission.RUN_COMMAND" />
+
+<queries>
+    <package android:name="com.termux" />
+    <package android:name="com.termux.x11" />
+</queries>

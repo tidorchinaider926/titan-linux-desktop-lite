@@ -1,0 +1,66 @@
+name: Build Titan Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install dependencies and build web app
+        run: |
+          npm install
+          npm run build
+      - name: Generate Android project
+        run: npx cap add android
+      - name: Install Titan native plugin
+        shell: bash
+        run: |
+          mkdir -p android/app/src/main/java/com/titan/linuxdesktop
+          cp android-plugin/TitanTermuxPlugin/TitanTermuxPlugin.kt android/app/src/main/java/com/titan/linuxdesktop/TitanTermuxPlugin.kt
+          cp android-plugin/MainActivity-snippet.kt android/app/src/main/java/com/titan/linuxdesktop/MainActivity.kt
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('android/app/src/main/AndroidManifest.xml')
+          s = p.read_text()
+          marker = '    <application'
+          additions = '''    <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
+    <queries>
+        <package android:name="com.termux" />
+        <package android:name="com.termux.x11" />
+    </queries>
+'''
+          if 'com.termux.permission.RUN_COMMAND' not in s:
+              if marker not in s:
+                  raise SystemExit('Could not find <application> in AndroidManifest.xml')
+              s = s.replace(marker, additions + marker, 1)
+          p.write_text(s)
+          PY
+      - name: Sync Capacitor and build debug APK
+        run: |
+          npx cap sync android
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: titan-linux-desktop-lite-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
