@@ -35,23 +35,24 @@ jobs:
           mkdir -p android/app/src/main/java/com/titan/linuxdesktop
           cp android-plugin/TitanTermuxPlugin/TitanTermuxPlugin.kt android/app/src/main/java/com/titan/linuxdesktop/TitanTermuxPlugin.kt
           cp android-plugin/MainActivity-snippet.kt android/app/src/main/java/com/titan/linuxdesktop/MainActivity.kt
-          python3 - <<'PY'
+          python3 - <<'PYTHON'
           from pathlib import Path
           p = Path('android/app/src/main/AndroidManifest.xml')
           s = p.read_text()
           marker = '    <application'
           additions = '''    <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
-    <queries>
-        <package android:name="com.termux" />
-        <package android:name="com.termux.x11" />
-    </queries>
-'''
+              <queries>
+                  <package android:name="com.termux" />
+                  <package android:name="com.termux.x11" />
+              </queries>
+          '''
           if 'com.termux.permission.RUN_COMMAND' not in s:
               if marker not in s:
                   raise SystemExit('Could not find <application> in AndroidManifest.xml')
               s = s.replace(marker, additions + marker, 1)
           p.write_text(s)
-          PY
+          PYTHON
+
       - name: Sync Capacitor and build debug APK
         run: |
           npx cap sync android
